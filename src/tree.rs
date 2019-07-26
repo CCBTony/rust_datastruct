@@ -161,6 +161,77 @@ pub mod binary {
             }
         }
     }
+
+    // 添加左节点, 返回原左节点
+    pub fn link_left<K, V> (
+        parent_node: Rc<RefCell<BinaryNode<K, V>>>,
+        child_node: Option<Rc<RefCell<BinaryNode<K, V>>>>,
+    ) -> Option<Rc<RefCell<BinaryNode<K, V>>>> where
+        K: PartialOrd + Display + Clone,
+        V: Clone + Display
+    {
+        let r_left = match parent_node.as_ref().borrow_mut().left() {
+            None => None,
+            Some(ref rc) => {
+                let t = Rc::clone(rc);
+                t.as_ref().borrow_mut().set_top(None);
+                Some(t)
+            }
+        };
+        if child_node.is_some() {
+            child_node.as_ref()
+                .unwrap()
+                .as_ref()
+                .borrow_mut()
+                .set_top(Some(Rc::downgrade(&parent_node)));
+        }
+        parent_node.as_ref().borrow_mut().set_left(child_node);
+
+        r_left
+    }
+
+    // 添加右边节点, 返回原右节点
+    pub fn link_right<K, V> (
+        parent_node: Rc<RefCell<BinaryNode<K, V>>>,
+        child_node: Option<Rc<RefCell<BinaryNode<K, V>>>>,
+    ) -> Option<Rc<RefCell<BinaryNode<K, V>>>> where
+        K: PartialOrd + Display + Clone,
+        V: Clone + Display
+    {
+        let r_right = match parent_node.as_ref().borrow_mut().right() {
+            None => None,
+            Some(ref rc) => {
+                let t = Rc::clone(rc);
+                t.as_ref().borrow_mut().set_top(None);
+                Some(t)
+            }
+        };
+        if child_node.is_some() {
+            child_node
+                .as_ref()
+                .unwrap()
+                .as_ref()
+                .borrow_mut()
+                .set_top(Some(Rc::downgrade(&parent_node)));
+        }
+        parent_node.as_ref().borrow_mut().set_right(child_node);
+
+        r_right
+    }
+
+    pub fn is_left_child<K, V> (
+        parent_node: Rc<RefCell<BinaryNode<K, V>>>,
+        child_node: Rc<RefCell<BinaryNode<K, V>>>,
+    ) -> bool where
+        K: PartialOrd + Display + Clone,
+        V: Clone + Display
+    {
+        let left_ptr = match parent_node.as_ref().borrow().left() {
+            None => None,
+            Some(ref rc) => Some(rc.as_ptr())
+        };
+        left_ptr.is_some() && child_node.as_ptr() == left_ptr.unwrap()
+    }
 }
 
 pub mod search {
@@ -247,83 +318,12 @@ pub mod search {
             }
         }
     }
-
-    // 添加左节点, 返回原左节点
-    pub fn link_left<K, V> (
-        parent_node: Rc<RefCell<BinaryNode<K, V>>>,
-        child_node: Option<Rc<RefCell<BinaryNode<K, V>>>>,
-    ) -> Option<Rc<RefCell<BinaryNode<K, V>>>> where
-        K: PartialOrd + Display + Clone,
-        V: Clone + Display
-    {
-        let r_left = match parent_node.as_ref().borrow_mut().left() {
-            None => None,
-            Some(ref rc) => {
-                let t = Rc::clone(rc);
-                t.as_ref().borrow_mut().set_top(None);
-                Some(t)
-            }
-        };
-        if child_node.is_some() {
-            child_node.as_ref()
-                .unwrap()
-                .as_ref()
-                .borrow_mut()
-                .set_top(Some(Rc::downgrade(&parent_node)));
-        }
-        parent_node.as_ref().borrow_mut().set_left(child_node);
-
-        r_left
-    }
-
-    // 添加右边节点, 返回原右节点
-    pub fn link_right<K, V> (
-        parent_node: Rc<RefCell<BinaryNode<K, V>>>,
-        child_node: Option<Rc<RefCell<BinaryNode<K, V>>>>,
-    ) -> Option<Rc<RefCell<BinaryNode<K, V>>>> where
-        K: PartialOrd + Display + Clone,
-        V: Clone + Display
-    {
-        let r_right = match parent_node.as_ref().borrow_mut().right() {
-            None => None,
-            Some(ref rc) => {
-                let t = Rc::clone(rc);
-                t.as_ref().borrow_mut().set_top(None);
-                Some(t)
-            }
-        };
-        if child_node.is_some() {
-            child_node
-                .as_ref()
-                .unwrap()
-                .as_ref()
-                .borrow_mut()
-                .set_top(Some(Rc::downgrade(&parent_node)));
-        }
-        parent_node.as_ref().borrow_mut().set_right(child_node);
-
-        r_right
-    }
-
-    pub fn is_left_child<K, V> (
-        parent_node: Rc<RefCell<BinaryNode<K, V>>>,
-        child_node: Rc<RefCell<BinaryNode<K, V>>>,
-    ) -> bool where
-        K: PartialOrd + Display + Clone,
-        V: Clone + Display
-    {
-        let left_ptr = match parent_node.as_ref().borrow().left() {
-            None => None,
-            Some(ref rc) => Some(rc.as_ptr())
-        };
-        left_ptr.is_some() && child_node.as_ptr() == left_ptr.unwrap()
-    }
 }
 
 pub mod avl {
     use super::*;
-    use super::binary::BinaryNode;
-    use super::search::SearchTree;
+    use super::binary::*;
+    use super::search::*;
 
     enum TranType {
         SingleLeft,
@@ -402,14 +402,14 @@ pub mod avl {
                     if cur_t.as_ref().borrow().right().is_some() {
                         cur = Rc::clone(cur_t.as_ref().borrow().right().as_ref().unwrap());
                     } else {
-                        search::link_right(Rc::clone(&cur), Some(node_rc));
+                        link_right(Rc::clone(&cur), Some(node_rc));
                         break;
                     }
                 } else {
                     if cur_t.as_ref().borrow().left().is_some() {
                         cur = Rc::clone(cur_t.as_ref().borrow().left().as_ref().unwrap());
                     } else {
-                        search::link_left(Rc::clone(&cur), Some(node_rc));
+                        link_left(Rc::clone(&cur), Some(node_rc));
                         break;
                     }
                 }
@@ -503,10 +503,10 @@ pub mod avl {
         ) {
             if top.is_some() {
                 let top_rc = top.as_ref().unwrap();
-                if search::is_left_child(Rc::clone(top_rc), old_parent) {
-                    search::link_left(Rc::clone(top_rc), Some(new_parent));
+                if is_left_child(Rc::clone(top_rc), old_parent) {
+                    link_left(Rc::clone(top_rc), Some(new_parent));
                 } else {
-                    search::link_right(Rc::clone(top_rc), Some(new_parent));
+                    link_right(Rc::clone(top_rc), Some(new_parent));
                 }
             } else {
                 self.root = Some(new_parent);
@@ -518,65 +518,65 @@ pub mod avl {
             match t {
                 TranType::SingleRight => {
                     let mut k1 = Rc::clone(&root);
-                    let mut k2 = search::link_right(Rc::clone(&k1), None).unwrap();
-                    let mut y = search::link_left(Rc::clone(&k2), None);
+                    let mut k2 = link_right(Rc::clone(&k1), None).unwrap();
+                    let mut y = link_left(Rc::clone(&k2), None);
                     let top = match root.as_ref().borrow().top() {
                         None => None,
                         Some(ref weak) => weak.upgrade()
                     };
 
-                    search::link_right(Rc::clone(&k1), y);
-                    search::link_left(Rc::clone(&k2), Some(k1));
+                    link_right(Rc::clone(&k1), y);
+                    link_left(Rc::clone(&k2), Some(k1));
 
                     self._replace_parent(top, root, k2);
                 }
                 TranType::DualRight => {
                     let mut k1 = Rc::clone(&root);
-                    let mut k3 = search::link_left(Rc::clone(&k1), None).unwrap();
-                    let mut k2 = search::link_right(Rc::clone(&k3), None).unwrap();
-                    let mut b = search::link_left(Rc::clone(&k2), None);
-                    let mut c = search::link_right(Rc::clone(&k2), None);
+                    let mut k3 = link_left(Rc::clone(&k1), None).unwrap();
+                    let mut k2 = link_right(Rc::clone(&k3), None).unwrap();
+                    let mut b = link_left(Rc::clone(&k2), None);
+                    let mut c = link_right(Rc::clone(&k2), None);
                     let top = match root.as_ref().borrow().top() {
                         None => None,
                         Some(ref weak) => weak.upgrade()
                     };
 
-                    search::link_right(Rc::clone(&k1), b);
-                    search::link_left(Rc::clone(&k3), c);
-                    search::link_right(Rc::clone(&k2), Some(k3));
-                    search::link_left(Rc::clone(&k2), Some(k1));
+                    link_right(Rc::clone(&k1), b);
+                    link_left(Rc::clone(&k3), c);
+                    link_right(Rc::clone(&k2), Some(k3));
+                    link_left(Rc::clone(&k2), Some(k1));
 
                     self._replace_parent(top, root, k2);
                 }
                 TranType::SingleLeft => {
                     let mut k2 = Rc::clone(&root);
-                    let mut k1 = search::link_left(Rc::clone(&k2), None).unwrap();
-                    let mut y = search::link_left(Rc::clone(&k1), None);
+                    let mut k1 = link_left(Rc::clone(&k2), None).unwrap();
+                    let mut y = link_left(Rc::clone(&k1), None);
                     let top = match root.as_ref().borrow().top() {
                         None => None,
                         Some(ref weak) => weak.upgrade()
                     };
 
-                    search::link_left(Rc::clone(&k2), y);
-                    search::link_right(Rc::clone(&k1), Some(k2));
+                    link_left(Rc::clone(&k2), y);
+                    link_right(Rc::clone(&k1), Some(k2));
 
                     self._replace_parent(top, root, k1);
                 }
                 TranType::DualLeft => {
                     let mut k3 = Rc::clone(&root);
-                    let mut k1 = search::link_left(Rc::clone(&k3), None).unwrap();
-                    let mut k2 = search::link_right(Rc::clone(&k1), None).unwrap();
-                    let mut b = search::link_left(Rc::clone(&k2), None);
-                    let mut c = search::link_right(Rc::clone(&k2), None);
+                    let mut k1 = link_left(Rc::clone(&k3), None).unwrap();
+                    let mut k2 = link_right(Rc::clone(&k1), None).unwrap();
+                    let mut b = link_left(Rc::clone(&k2), None);
+                    let mut c = link_right(Rc::clone(&k2), None);
                     let top = match root.as_ref().borrow().top() {
                         None => None,
                         Some(ref weak) => weak.upgrade()
                     };
 
-                    search::link_right(Rc::clone(&k1), b);
-                    search::link_left(Rc::clone(&k3), c);
-                    search::link_right(Rc::clone(&k2), Some(k3));
-                    search::link_left(Rc::clone(&k2), Some(k1));
+                    link_right(Rc::clone(&k1), b);
+                    link_left(Rc::clone(&k3), c);
+                    link_right(Rc::clone(&k2), Some(k3));
+                    link_left(Rc::clone(&k2), Some(k1));
 
                     self._replace_parent(top, root, k2);
                 }
