@@ -1,0 +1,7 @@
+[package]
+name = "rust_study"
+version = "0.1.0"
+authors = ["TonyGuo <zijun@qipeng.com>"]
+
+[dependencies]
+getset = "0.0.7"

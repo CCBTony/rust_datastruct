@@ -1,0 +1,54 @@
+[[package]]
+name = "getset"
+version = "0.0.7"
+source = "registry+https://mirrors.ustc.edu.cn/crates.io-index/"
+dependencies = [
+ "proc-macro2 0.4.30 (registry+https://mirrors.ustc.edu.cn/crates.io-index/)",
+ "quote 0.6.12 (registry+https://mirrors.ustc.edu.cn/crates.io-index/)",
+ "syn 0.15.39 (registry+https://mirrors.ustc.edu.cn/crates.io-index/)",
+]
+
+[[package]]
+name = "proc-macro2"
+version = "0.4.30"
+source = "registry+https://mirrors.ustc.edu.cn/crates.io-index/"
+dependencies = [
+ "unicode-xid 0.1.0 (registry+https://mirrors.ustc.edu.cn/crates.io-index/)",
+]
+
+[[package]]
+name = "quote"
+version = "0.6.12"
+source = "registry+https://mirrors.ustc.edu.cn/crates.io-index/"
+dependencies = [
+ "proc-macro2 0.4.30 (registry+https://mirrors.ustc.edu.cn/crates.io-index/)",
+]
+
+[[package]]
+name = "rust_study"
+version = "0.1.0"
+dependencies = [
+ "getset 0.0.7 (registry+https://mirrors.ustc.edu.cn/crates.io-index/)",
+]
+
+[[package]]
+name = "syn"
+version = "0.15.39"
+source = "registry+https://mirrors.ustc.edu.cn/crates.io-index/"
+dependencies = [
+ "proc-macro2 0.4.30 (registry+https://mirrors.ustc.edu.cn/crates.io-index/)",
+ "quote 0.6.12 (registry+https://mirrors.ustc.edu.cn/crates.io-index/)",
+ "unicode-xid 0.1.0 (registry+https://mirrors.ustc.edu.cn/crates.io-index/)",
+]
+
+[[package]]
+name = "unicode-xid"
+version = "0.1.0"
+source = "registry+https://mirrors.ustc.edu.cn/crates.io-index/"
+
+[metadata]
+"checksum getset 0.0.7 (registry+https://mirrors.ustc.edu.cn/crates.io-index/)" = "19fbde0fad0c1c1f9474694b1f5c9ba22b09f2f74f74e6d2bd19c43f6656e2cb"
+"checksum proc-macro2 0.4.30 (registry+https://mirrors.ustc.edu.cn/crates.io-index/)" = "cf3d2011ab5c909338f7887f4fc896d35932e29146c12c8d01da6b22a80ba759"
+"checksum quote 0.6.12 (registry+https://mirrors.ustc.edu.cn/crates.io-index/)" = "faf4799c5d274f3868a4aae320a0a182cbd2baee377b378f080e16a23e9d80db"
+"checksum syn 0.15.39 (registry+https://mirrors.ustc.edu.cn/crates.io-index/)" = "b4d960b829a55e56db167e861ddb43602c003c7be0bee1d345021703fac2fb7c"
+"checksum unicode-xid 0.1.0 (registry+https://mirrors.ustc.edu.cn/crates.io-index/)" = "fc72304796d0818e357ead4e000d19c9c174ab23dc11093ac919054d20a6a7fc"
