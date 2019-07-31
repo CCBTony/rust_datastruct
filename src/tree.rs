@@ -163,20 +163,19 @@ pub mod binary {
     }
 
     // 添加左节点, 返回原左节点
-    pub fn link_left<K, V> (
+    pub fn link_left<K, V>(
         parent_node: Rc<RefCell<BinaryNode<K, V>>>,
         child_node: Option<Rc<RefCell<BinaryNode<K, V>>>>,
     ) -> Option<Rc<RefCell<BinaryNode<K, V>>>> where
         K: PartialOrd + Display + Clone,
         V: Clone + Display
     {
-        let r_left = match parent_node.as_ref().borrow_mut().left() {
-            None => None,
-            Some(ref rc) => {
-                let t = Rc::clone(rc);
-                t.as_ref().borrow_mut().set_top(None);
-                Some(t)
-            }
+        let r_left = if parent_node.as_ref().borrow_mut().left().is_none() {
+            None
+        } else {
+            let t = Rc::clone(parent_node.as_ref().borrow_mut().left().as_ref().unwrap());
+            t.as_ref().borrow_mut().set_top(None);
+            Some(t)
         };
         if child_node.is_some() {
             child_node.as_ref()
@@ -191,35 +190,36 @@ pub mod binary {
     }
 
     // 添加右边节点, 返回原右节点
-    pub fn link_right<K, V> (
+    pub fn link_right<K, V>(
         parent_node: Rc<RefCell<BinaryNode<K, V>>>,
         child_node: Option<Rc<RefCell<BinaryNode<K, V>>>>,
     ) -> Option<Rc<RefCell<BinaryNode<K, V>>>> where
         K: PartialOrd + Display + Clone,
         V: Clone + Display
     {
-        let r_right = match parent_node.as_ref().borrow_mut().right() {
-            None => None,
-            Some(ref rc) => {
-                let t = Rc::clone(rc);
-                t.as_ref().borrow_mut().set_top(None);
-                Some(t)
-            }
+        let r_right = if parent_node.as_ref().borrow_mut().right().is_none() {
+            None
+        } else {
+            let t = Rc::clone(parent_node.as_ref().borrow_mut().right().as_ref().unwrap());
+            t.as_ref().borrow_mut().set_top(None);
+            Some(t)
         };
+
         if child_node.is_some() {
+            let weak_rc = Rc::downgrade(&parent_node);
             child_node
                 .as_ref()
                 .unwrap()
                 .as_ref()
                 .borrow_mut()
-                .set_top(Some(Rc::downgrade(&parent_node)));
+                .set_top(Some(weak_rc));
         }
         parent_node.as_ref().borrow_mut().set_right(child_node);
 
         r_right
     }
 
-    pub fn is_left_child<K, V> (
+    pub fn is_left_child<K, V>(
         parent_node: Rc<RefCell<BinaryNode<K, V>>>,
         child_node: Rc<RefCell<BinaryNode<K, V>>>,
     ) -> bool where
@@ -232,11 +232,28 @@ pub mod binary {
         };
         left_ptr.is_some() && child_node.as_ptr() == left_ptr.unwrap()
     }
+
+    pub fn take_from_top<K, V>(node: &Rc<RefCell<BinaryNode<K, V>>>) -> Option<Rc<RefCell<BinaryNode<K, V>>>> where
+        K: PartialOrd + Display + Clone,
+        V: Clone + Display
+    {
+        if node.as_ref().borrow().top().is_some() {
+            let rc = node.as_ref().borrow().top().as_ref().unwrap().upgrade().unwrap();
+            if is_left_child(Rc::clone(&rc), Rc::clone(node)) {
+                link_left(Rc::clone(&rc), None);
+            } else {
+                link_right(Rc::clone(&rc), None);
+            }
+            Some(rc)
+        } else {
+            None
+        }
+    }
 }
 
 pub mod search {
     use super::*;
-    use super::binary::BinaryNode;
+    use super::binary::{BinaryNode, is_left_child};
 
     pub trait SearchTree<K, V> where
         K: PartialOrd + Display + Clone,
@@ -318,6 +335,61 @@ pub mod search {
             }
         }
     }
+
+    pub fn dumps<K, V>(node: Rc<RefCell<BinaryNode<K, V>>>, level: i32) where
+        K: PartialOrd + Display + Clone,
+        V: Clone + Display
+    {
+        let mut idx = 0;
+        while idx < level {
+            print!(" ");
+            idx += 1;
+        }
+        let left;
+        let right;
+        {
+            let borrow = node.as_ref().borrow();
+            println!(
+                "[{}] key={}, value={}, strong={}, weak={}, height={}, depth={}",
+                if borrow.top().is_none() {
+                    String::from("root")
+                } else {
+                    match borrow.top().as_ref().unwrap().upgrade() {
+                        None => String::from("root"),
+                        Some(ref top_rc) => {
+                            if is_left_child(Rc::clone(top_rc), Rc::clone(&node)) {
+                                format!("{}-L", top_rc.as_ref().borrow().key())
+                            } else {
+                                format!("{}-R", top_rc.as_ref().borrow().key())
+                            }
+                        }
+                    }
+                },
+                borrow.key(),
+                borrow.value().as_ref().borrow(),
+                Rc::strong_count(&node) - 1, Rc::weak_count(&node),
+                borrow.height(),
+                borrow.depth()
+            );
+
+            left = match borrow.left() {
+                None => None,
+                Some(ref rc) => Some(Rc::clone(rc))
+            };
+
+            right = match borrow.right() {
+                None => None,
+                Some(ref rc) => Some(Rc::clone(rc))
+            };
+        }
+
+        if let Some(left_rc) = left {
+            dumps(left_rc, level + 1);
+        }
+        if let Some(right_rc) = right {
+            dumps(right_rc, level + 1);
+        }
+    }
 }
 
 pub mod avl {
@@ -338,7 +410,7 @@ pub mod avl {
     }
 
     // 判断旋转类型
-    fn _test_tran_type<K, V> (root: Rc<RefCell<BinaryNode<K, V>>>) -> TranType where
+    fn _test_tran_type<K, V>(root: Rc<RefCell<BinaryNode<K, V>>>) -> TranType where
         K: PartialOrd + Display + Clone,
         V: Clone + Display
     {
@@ -499,7 +571,7 @@ pub mod avl {
             &mut self,
             top: Option<Rc<RefCell<BinaryNode<K, V>>>>,
             old_parent: Rc<RefCell<BinaryNode<K, V>>>,
-            new_parent: Rc<RefCell<BinaryNode<K, V>>>
+            new_parent: Rc<RefCell<BinaryNode<K, V>>>,
         ) {
             if top.is_some() {
                 let top_rc = top.as_ref().unwrap();
@@ -517,13 +589,11 @@ pub mod avl {
         fn _adjust(&mut self, root: Rc<RefCell<BinaryNode<K, V>>>, t: TranType) {
             match t {
                 TranType::SingleRight => {
+                    println!("SingleRight!");
                     let mut k1 = Rc::clone(&root);
                     let mut k2 = link_right(Rc::clone(&k1), None).unwrap();
                     let mut y = link_left(Rc::clone(&k2), None);
-                    let top = match root.as_ref().borrow().top() {
-                        None => None,
-                        Some(ref weak) => weak.upgrade()
-                    };
+                    let top = take_from_top(&root);
 
                     link_right(Rc::clone(&k1), y);
                     link_left(Rc::clone(&k2), Some(k1));
@@ -531,15 +601,13 @@ pub mod avl {
                     self._replace_parent(top, root, k2);
                 }
                 TranType::DualRight => {
+                    println!("DualRight!");
                     let mut k1 = Rc::clone(&root);
                     let mut k3 = link_left(Rc::clone(&k1), None).unwrap();
                     let mut k2 = link_right(Rc::clone(&k3), None).unwrap();
                     let mut b = link_left(Rc::clone(&k2), None);
                     let mut c = link_right(Rc::clone(&k2), None);
-                    let top = match root.as_ref().borrow().top() {
-                        None => None,
-                        Some(ref weak) => weak.upgrade()
-                    };
+                    let top = take_from_top(&root);
 
                     link_right(Rc::clone(&k1), b);
                     link_left(Rc::clone(&k3), c);
@@ -549,13 +617,11 @@ pub mod avl {
                     self._replace_parent(top, root, k2);
                 }
                 TranType::SingleLeft => {
+                    println!("SingleLeft!");
                     let mut k2 = Rc::clone(&root);
                     let mut k1 = link_left(Rc::clone(&k2), None).unwrap();
                     let mut y = link_left(Rc::clone(&k1), None);
-                    let top = match root.as_ref().borrow().top() {
-                        None => None,
-                        Some(ref weak) => weak.upgrade()
-                    };
+                    let top = take_from_top(&root);
 
                     link_left(Rc::clone(&k2), y);
                     link_right(Rc::clone(&k1), Some(k2));
@@ -563,15 +629,13 @@ pub mod avl {
                     self._replace_parent(top, root, k1);
                 }
                 TranType::DualLeft => {
+                    println!("DualLeft!");
                     let mut k3 = Rc::clone(&root);
                     let mut k1 = link_left(Rc::clone(&k3), None).unwrap();
                     let mut k2 = link_right(Rc::clone(&k1), None).unwrap();
                     let mut b = link_left(Rc::clone(&k2), None);
                     let mut c = link_right(Rc::clone(&k2), None);
-                    let top = match root.as_ref().borrow().top() {
-                        None => None,
-                        Some(ref weak) => weak.upgrade()
-                    };
+                    let top = take_from_top(&root);
 
                     link_right(Rc::clone(&k1), b);
                     link_left(Rc::clone(&k3), c);
@@ -581,44 +645,6 @@ pub mod avl {
                     self._replace_parent(top, root, k2);
                 }
                 _ => ()
-            }
-        }
-
-        pub fn dumps(node: Rc<RefCell<BinaryNode<K, V>>>, level: i32) {
-            let mut idx = 0;
-            while idx < level {
-                print!(" ");
-                idx += 1;
-            }
-            let left;
-            let right;
-            {
-                let borrow = node.as_ref().borrow();
-                println!(
-                    "key={}, value={}, strong={}, weak={}, height={}, depth={}",
-                    borrow.key(),
-                    borrow.value().as_ref().borrow(),
-                    Rc::strong_count(&node) - 1, Rc::weak_count(&node),
-                    borrow.height(),
-                    borrow.depth()
-                );
-
-                left = match borrow.left() {
-                    None => None,
-                    Some(ref rc) => Some(Rc::clone(rc))
-                };
-
-                right = match borrow.right() {
-                    None => None,
-                    Some(ref rc) => Some(Rc::clone(rc))
-                };
-            }
-
-            if let Some(left_rc) = left {
-                Self::dumps(left_rc, level + 1);
-            }
-            if let Some(right_rc) = right {
-                Self::dumps(right_rc, level + 1);
             }
         }
     }
@@ -661,7 +687,7 @@ mod tests {
     }
 
     #[test]
-    fn link_test () {
+    fn link_test() {
         use super::*;
         use super::binary::*;
         use super::search::*;
@@ -710,8 +736,10 @@ mod tests {
     #[test]
     fn create_avl_tree() {
         use super::avl::AVLTree;
+        use super::search::dumps;
 
         let mut names = vec!["2234", "1234", "9953", "3012", "7777", "6161", "4532", "6418", "9090", "8011", "5234", "4444"];
+//        let mut names = vec!["2234", "1234", "9953", "3012", "7777", "6161", "4532", "6418", "9090", "8011", "5234"];
         let mut idx = 0;
         let mut tree = AVLTree::<String, String>::new();
 
@@ -720,7 +748,7 @@ mod tests {
             idx += 1;
         }
 
-        AVLTree::dumps(Rc::clone(tree.root().as_ref().unwrap()), 0);
+        dumps(Rc::clone(tree.root().as_ref().unwrap()), 0);
         assert_eq!(3, tree.height());
         assert_eq!("4444", tree.min_val_clone().unwrap());
         assert_eq!("9953", tree.max_val_clone().unwrap());
