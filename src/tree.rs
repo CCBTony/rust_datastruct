@@ -14,14 +14,12 @@ pub mod binary {
     }
 
     #[derive(Getters, MutGetters, Setters, Clone, Debug)]
-    pub struct BinaryNode<K, V> where
-        K: PartialOrd + Display + Clone,
-        V: Clone + Display
+    pub struct BinaryNode<V: Clone + Display>
     {
         #[get = "pub"]
         #[set = "pub"]
         #[get_mut = "pub"]
-        key: K,
+        key: String,
 
         #[get = "pub"]
         #[set = "pub"]
@@ -31,24 +29,21 @@ pub mod binary {
         #[get = "pub"]
         #[set = "pub"]
         #[get_mut = "pub"]
-        top: Option<Weak<RefCell<BinaryNode<K, V>>>>,
+        top: Option<Weak<RefCell<BinaryNode<V>>>>,
 
         #[get = "pub"]
         #[set = "pub"]
         #[get_mut = "pub"]
-        left: Option<Rc<RefCell<BinaryNode<K, V>>>>,
+        left: Option<Rc<RefCell<BinaryNode<V>>>>,
 
         #[get = "pub"]
         #[set = "pub"]
         #[get_mut = "pub"]
-        right: Option<Rc<RefCell<BinaryNode<K, V>>>>,
+        right: Option<Rc<RefCell<BinaryNode<V>>>>,
     }
 
-    impl<K, V> BinaryNode<K, V> where
-        K: PartialOrd + Display + Clone,
-        V: Clone + Display
-    {
-        pub fn new(key: K, value: V) -> Self {
+    impl<V: Clone + Display> BinaryNode<V> {
+        pub fn new(key: String, value: V) -> Self {
             Self {
                 key,
                 value: Rc::new(RefCell::new(value)),
@@ -60,7 +55,7 @@ pub mod binary {
 
         pub fn depth(&self) -> i32 {
             let mut d = 0;
-            let mut cur: Rc<RefCell<BinaryNode<K, V>>>;
+            let mut cur: Rc<RefCell<BinaryNode<V>>>;
 
             match self.top {
                 None => return d,
@@ -95,10 +90,10 @@ pub mod binary {
         }
 
         pub fn height(&self) -> i32 {
-            type N<K, V> = Rc<RefCell<BinaryNode<K, V>>>;
+            type N<V> = Rc<RefCell<BinaryNode<V>>>;
             let mut h = 0;
             let mut max_h = 0;
-            let mut stack: Vec<(N<K, V>, NodeCheckStatus)> = Vec::new();
+            let mut stack: Vec<(N<V>, NodeCheckStatus)> = Vec::new();
 
             if self.left.is_some() {
                 let t = self.left.as_ref();
@@ -163,13 +158,10 @@ pub mod binary {
     }
 
     // 添加左节点, 返回原左节点
-    pub fn link_left<K, V>(
-        parent_node: Rc<RefCell<BinaryNode<K, V>>>,
-        child_node: Option<Rc<RefCell<BinaryNode<K, V>>>>,
-    ) -> Option<Rc<RefCell<BinaryNode<K, V>>>> where
-        K: PartialOrd + Display + Clone,
-        V: Clone + Display
-    {
+    pub fn link_left<V: Clone + Display>(
+        parent_node: Rc<RefCell<BinaryNode<V>>>,
+        child_node: Option<Rc<RefCell<BinaryNode<V>>>>,
+    ) -> Option<Rc<RefCell<BinaryNode<V>>>> {
         let r_left = if parent_node.as_ref().borrow_mut().left().is_none() {
             None
         } else {
@@ -190,13 +182,10 @@ pub mod binary {
     }
 
     // 添加右边节点, 返回原右节点
-    pub fn link_right<K, V>(
-        parent_node: Rc<RefCell<BinaryNode<K, V>>>,
-        child_node: Option<Rc<RefCell<BinaryNode<K, V>>>>,
-    ) -> Option<Rc<RefCell<BinaryNode<K, V>>>> where
-        K: PartialOrd + Display + Clone,
-        V: Clone + Display
-    {
+    pub fn link_right<V: Clone + Display>(
+        parent_node: Rc<RefCell<BinaryNode<V>>>,
+        child_node: Option<Rc<RefCell<BinaryNode<V>>>>,
+    ) -> Option<Rc<RefCell<BinaryNode<V>>>> {
         let r_right = if parent_node.as_ref().borrow_mut().right().is_none() {
             None
         } else {
@@ -219,13 +208,10 @@ pub mod binary {
         r_right
     }
 
-    pub fn is_left_child<K, V>(
-        parent_node: Rc<RefCell<BinaryNode<K, V>>>,
-        child_node: Rc<RefCell<BinaryNode<K, V>>>,
-    ) -> bool where
-        K: PartialOrd + Display + Clone,
-        V: Clone + Display
-    {
+    pub fn is_left_child<V: Clone + Display>(
+        parent_node: Rc<RefCell<BinaryNode<V>>>,
+        child_node: Rc<RefCell<BinaryNode<V>>>,
+    ) -> bool {
         let left_ptr = match parent_node.as_ref().borrow().left() {
             None => None,
             Some(ref rc) => Some(rc.as_ptr())
@@ -233,10 +219,7 @@ pub mod binary {
         left_ptr.is_some() && child_node.as_ptr() == left_ptr.unwrap()
     }
 
-    pub fn take_from_top<K, V>(node: &Rc<RefCell<BinaryNode<K, V>>>) -> Option<Rc<RefCell<BinaryNode<K, V>>>> where
-        K: PartialOrd + Display + Clone,
-        V: Clone + Display
-    {
+    pub fn take_from_top<V: Clone + Display>(node: &Rc<RefCell<BinaryNode<V>>>) -> Option<Rc<RefCell<BinaryNode<V>>>> {
         if node.as_ref().borrow().top().is_some() {
             let rc = node.as_ref().borrow().top().as_ref().unwrap().upgrade().unwrap();
             if is_left_child(Rc::clone(&rc), Rc::clone(node)) {
@@ -255,15 +238,12 @@ pub mod search {
     use super::*;
     use super::binary::{BinaryNode, is_left_child};
 
-    pub trait SearchTree<K, V> where
-        K: PartialOrd + Display + Clone,
-        V: Clone + Display
-    {
-        fn root(&self) -> &Option<Rc<RefCell<BinaryNode<K, V>>>>;
-        fn add_node(&mut self, node_rc: Rc<RefCell<BinaryNode<K, V>>>);
+    pub trait SearchTree<V: Clone + Display> {
+        fn root(&self) -> &Option<Rc<RefCell<BinaryNode<V>>>>;
+        fn add_node(&mut self, node_rc: Rc<RefCell<BinaryNode<V>>>);
 
         // 以下为默认实现
-        fn find_node(&self, key: &K) -> Option<Rc<RefCell<BinaryNode<K, V>>>> {
+        fn find_node(&self, key: &String) -> Option<Rc<RefCell<BinaryNode<V>>>> {
             let r = self.root();
             match *r {
                 None => None,
@@ -271,26 +251,26 @@ pub mod search {
             }
         }
 
-        fn find(&self, key: &K) -> Option<Rc<RefCell<V>>> {
+        fn find(&self, key: &String) -> Option<Rc<RefCell<V>>> {
             match self.find_node(key) {
                 None => None,
                 Some(r) => Some(Rc::clone(r.as_ref().borrow().value()))
             }
         }
 
-        fn find_and_clone(&self, key: &K) -> Option<V> {
+        fn find_and_clone(&self, key: &String) -> Option<V> {
             match self.find(key) {
                 None => None,
                 Some(rc) => Some(rc.as_ref().borrow().clone())
             }
         }
 
-        fn add(&mut self, key: K, value: V) {
+        fn add(&mut self, key: String, value: V) {
             let node_rc = Rc::new(RefCell::new(BinaryNode::new(key, value)));
             self.add_node(node_rc);
         }
 
-        fn update(&mut self, key: &K, value: V) -> Result<(), String> {
+        fn update(&mut self, key: &String, value: V) -> Result<(), String> {
             let dest = self.find_node(key);
             match dest {
                 None => Err(String::from(format!("node={} not exists", key))),
@@ -312,10 +292,7 @@ pub mod search {
         fn depth(&self) -> i32 { self.height() }
     }
 
-    fn _find_node<K, V>(key: &K, mut cur: Rc<RefCell<BinaryNode<K, V>>>) -> Option<Rc<RefCell<BinaryNode<K, V>>>> where
-        K: PartialOrd + Display + Clone,
-        V: Clone + Display
-    {
+    fn _find_node<V: Clone + Display>(key: &String, mut cur: Rc<RefCell<BinaryNode<V>>>) -> Option<Rc<RefCell<BinaryNode<V>>>> {
         loop {
             let cur_t = Rc::clone(&cur);
             let cur_borrow = cur_t.as_ref().borrow();
@@ -336,10 +313,7 @@ pub mod search {
         }
     }
 
-    pub fn dumps<K, V>(node: Rc<RefCell<BinaryNode<K, V>>>, level: i32) where
-        K: PartialOrd + Display + Clone,
-        V: Clone + Display
-    {
+    pub fn dumps<V: Clone + Display>(node: Rc<RefCell<BinaryNode<V>>>, level: i32) {
         let mut idx = 0;
         while idx < level {
             print!(" ");
@@ -410,10 +384,7 @@ pub mod avl {
     }
 
     // 判断旋转类型
-    fn _test_tran_type<K, V>(root: Rc<RefCell<BinaryNode<K, V>>>) -> TranType where
-        K: PartialOrd + Display + Clone,
-        V: Clone + Display
-    {
+    fn _test_tran_type<V: Clone + Display>(root: Rc<RefCell<BinaryNode<V>>>) -> TranType {
         let root_borrow = root.as_ref().borrow();
         let left_tree_height = root_borrow.left_height();
         let right_tree_height = root_borrow.right_height();
@@ -440,24 +411,18 @@ pub mod avl {
     }
 
     #[derive(Getters, MutGetters, Setters, Clone, Debug)]
-    pub struct AVLTree<K, V> where
-        K: PartialOrd + Display + Clone,
-        V: Clone + Display
-    {
+    pub struct AVLTree<V: Clone + Display> {
         #[set = "pub"]
         #[get_mut = "pub"]
-        root: Option<Rc<RefCell<BinaryNode<K, V>>>>,
+        root: Option<Rc<RefCell<BinaryNode<V>>>>,
     }
 
-    impl<K, V> SearchTree<K, V> for AVLTree<K, V> where
-        K: PartialOrd + Display + Clone,
-        V: Clone + Display
-    {
-        fn root(&self) -> &Option<Rc<RefCell<BinaryNode<K, V>>>> {
+    impl<V: Clone + Display> SearchTree<V> for AVLTree<V> {
+        fn root(&self) -> &Option<Rc<RefCell<BinaryNode<V>>>> {
             return &self.root;
         }
 
-        fn add_node(&mut self, node_rc: Rc<RefCell<BinaryNode<K, V>>>) {
+        fn add_node(&mut self, node_rc: Rc<RefCell<BinaryNode<V>>>) {
             if self.root.is_none() {
                 self.root = Some(node_rc);
                 return;
@@ -504,14 +469,11 @@ pub mod avl {
         }
     }
 
-    impl<K, V> AVLTree<K, V> where
-        K: PartialOrd + Display + Clone,
-        V: Clone + Display
-    {
+    impl<V: Clone + Display> AVLTree<V> {
         pub fn new() -> Self { Self { root: None } }
 
         pub fn min_val(&self) -> Option<Rc<RefCell<V>>> {
-            let mut cur: Rc<RefCell<BinaryNode<K, V>>>;
+            let mut cur: Rc<RefCell<BinaryNode<V>>>;
             match self.root {
                 None => None,
                 Some(ref r) => {
@@ -536,7 +498,7 @@ pub mod avl {
         }
 
         pub fn max_val(&self) -> Option<Rc<RefCell<V>>> {
-            let mut cur: Rc<RefCell<BinaryNode<K, V>>>;
+            let mut cur: Rc<RefCell<BinaryNode<V>>>;
             match self.root {
                 None => None,
                 Some(ref r) => {
@@ -569,9 +531,9 @@ pub mod avl {
 
         fn _replace_parent(
             &mut self,
-            top: Option<Rc<RefCell<BinaryNode<K, V>>>>,
-            old_parent: Rc<RefCell<BinaryNode<K, V>>>,
-            new_parent: Rc<RefCell<BinaryNode<K, V>>>,
+            top: Option<Rc<RefCell<BinaryNode<V>>>>,
+            old_parent: Rc<RefCell<BinaryNode<V>>>,
+            new_parent: Rc<RefCell<BinaryNode<V>>>,
         ) {
             if top.is_some() {
                 let top_rc = top.as_ref().unwrap();
@@ -586,7 +548,7 @@ pub mod avl {
         }
 
         // 旋转平衡，算法参见《数据结构与算法分析：C语言描述》第二版 4.4
-        fn _adjust(&mut self, root: Rc<RefCell<BinaryNode<K, V>>>, t: TranType) {
+        fn _adjust(&mut self, root: Rc<RefCell<BinaryNode<V>>>, t: TranType) {
             match t {
                 TranType::SingleRight => {
                     println!("SingleRight!");
@@ -660,9 +622,9 @@ mod tests {
         use super::binary::*;
         use super::search::*;
 
-        let a = Rc::new(RefCell::new(BinaryNode::new(28, "Tony")));
-        let b = Rc::new(RefCell::new(BinaryNode::new(20, "Guo")));
-        let c = Rc::new(RefCell::new(BinaryNode::new(19, "Guo Tony")));
+        let a = Rc::new(RefCell::new(BinaryNode::new(String::from("28"), "Tony")));
+        let b = Rc::new(RefCell::new(BinaryNode::new(String::from("20"), "Guo")));
+        let c = Rc::new(RefCell::new(BinaryNode::new(String::from("19"), "Guo Tony")));
 
         let ref_a = a.as_ref();
         let ref_b = b.as_ref();
@@ -692,9 +654,9 @@ mod tests {
         use super::binary::*;
         use super::search::*;
 
-        let a = Rc::new(RefCell::new(BinaryNode::new(28, "Tony")));
-        let b = Rc::new(RefCell::new(BinaryNode::new(20, "Guo")));
-        let c = Rc::new(RefCell::new(BinaryNode::new(19, "Guo Tony")));
+        let a = Rc::new(RefCell::new(BinaryNode::new(String::from("28"), "Tony")));
+        let b = Rc::new(RefCell::new(BinaryNode::new(String::from("20"), "Guo")));
+        let c = Rc::new(RefCell::new(BinaryNode::new(String::from("19"), "Guo Tony")));
 
         link_right(Rc::clone(&a), Some(Rc::clone(&b)));
         assert_eq!(1, Rc::strong_count(&a));
@@ -739,9 +701,8 @@ mod tests {
         use super::search::dumps;
 
         let mut names = vec!["2234", "1234", "9953", "3012", "7777", "6161", "4532", "6418", "9090", "8011", "5234", "4444"];
-//        let mut names = vec!["2234", "1234", "9953", "3012", "7777", "6161", "4532", "6418", "9090", "8011", "5234"];
         let mut idx = 0;
-        let mut tree = AVLTree::<String, String>::new();
+        let mut tree = AVLTree::<String>::new();
 
         while names.len() > 0 {
             tree.add(idx.to_string(), String::from(names.pop().unwrap()));
